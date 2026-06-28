@@ -344,47 +344,17 @@ The root account is different from the validator identity:
 
 The root account is deterministically derived from the network passphrase. Changing the network passphrase creates a different root account.
 
-### Install Stellar CLI
+### Retrieve the root account with Stellar CLI
 
-The recommended way to retrieve the root account is with Stellar CLI.
+This project already requires Docker, so Stellar CLI can be run as a container without installing anything on the host.
 
-#### Linux, macOS, or WSL
-
-```bash
-curl -fsSL https://github.com/stellar/stellar-cli/raw/main/install.sh | sh
-```
-
-Open a new terminal, then verify the installation:
+Verify the CLI image:
 
 ```bash
-stellar --version
+docker run --rm stellar/stellar-cli:latest --version
 ```
 
-If the command is not found, add the installation directory to your `PATH` as instructed by the installer.
-
-#### Homebrew
-
-```bash
-brew install stellar-cli
-```
-
-#### Windows
-
-```powershell
-winget install --id Stellar.StellarCLI
-```
-
-#### Install with Cargo
-
-This method requires Rust and a C build toolchain:
-
-```bash
-cargo install --locked stellar-cli
-```
-
-### Derive the root account from `.env`
-
-Load the network passphrase from the repository’s `.env` file:
+Load the network passphrase from `.env`:
 
 ```bash
 set -a
@@ -395,18 +365,32 @@ set +a
 Display the root account public key:
 
 ```bash
-stellar network root-account public-key \
+docker run --rm \
+  stellar/stellar-cli:latest \
+  network root-account public-key \
   --network-passphrase "$NETWORK_PASSPHRASE"
 ```
 
 Display the root account secret:
 
 ```bash
-stellar network root-account secret \
+docker run --rm \
+  stellar/stellar-cli:latest \
+  network root-account secret \
   --network-passphrase "$NETWORK_PASSPHRASE"
 ```
 
-Using the value from `.env` avoids accidentally deriving an account for a different network passphrase.
+The root account is deterministically derived from the exact network passphrase. Using the value loaded from `.env` avoids deriving an account for the wrong network.
+
+For a freshly initialized network, the same information may appear in Horizon’s Captive Core initialization logs:
+
+```bash
+docker compose logs horizon |
+  grep -E "Root account:|Root account seed:"
+```
+
+> [!CAUTION]
+> The root account secret controls the initial native-asset supply. Never commit it, put it in a public environment file, expose it to frontend applications, or print it in CI logs.
 
 ### Retrieve it from first-start Horizon logs
 
