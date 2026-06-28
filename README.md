@@ -333,39 +333,126 @@ curl -s \
 
 ## Root account
 
-A new standalone Stellar network has a root account containing the initial native-asset supply.
+A new standalone Stellar network creates a root account containing the initial native-asset supply.
 
 The root account is different from the validator identity:
 
-| Identity | Purpose |
-|---|---|
-| Validator seed | Signs SCP messages for the Core validator |
-| Root account seed | Signs transactions and funds new accounts |
+| Identity          | Purpose                                                      |
+| ----------------- | ------------------------------------------------------------ |
+| Validator seed    | Identifies the Stellar Core validator and signs SCP messages |
+| Root account seed | Signs transactions and funds new accounts                    |
 
-The root account is deterministically derived from the network passphrase.
+The root account is deterministically derived from the network passphrase. Changing the network passphrase creates a different root account.
 
-With Stellar CLI installed, derive its public key:
+### Install Stellar CLI
+
+The recommended way to retrieve the root account is with Stellar CLI.
+
+#### Linux, macOS, or WSL
+
+```bash
+curl -fsSL https://github.com/stellar/stellar-cli/raw/main/install.sh | sh
+```
+
+Open a new terminal, then verify the installation:
+
+```bash
+stellar --version
+```
+
+If the command is not found, add the installation directory to your `PATH` as instructed by the installer.
+
+#### Homebrew
+
+```bash
+brew install stellar-cli
+```
+
+#### Windows
+
+```powershell
+winget install --id Stellar.StellarCLI
+```
+
+#### Install with Cargo
+
+This method requires Rust and a C build toolchain:
+
+```bash
+cargo install --locked stellar-cli
+```
+
+### Derive the root account from `.env`
+
+Load the network passphrase from the repository’s `.env` file:
+
+```bash
+set -a
+. ./.env
+set +a
+```
+
+Display the root account public key:
 
 ```bash
 stellar network root-account public-key \
-  --network-passphrase "Acme Private Stellar Network ; June 2026"
+  --network-passphrase "$NETWORK_PASSPHRASE"
 ```
 
-Derive its secret:
+Display the root account secret:
 
 ```bash
 stellar network root-account secret \
-  --network-passphrase "Acme Private Stellar Network ; June 2026"
+  --network-passphrase "$NETWORK_PASSPHRASE"
 ```
 
-You can also inspect the first Stellar Core startup logs:
+Using the value from `.env` avoids accidentally deriving an account for a different network passphrase.
+
+### Retrieve it from first-start Horizon logs
+
+During the first initialization of a fresh network, Horizon’s Captive Core may print the root account public key and secret.
+
+Use an exact search:
 
 ```bash
-docker compose logs stellar-core | grep -i -E "root|master|secret|account"
+docker compose logs horizon |
+  grep -E "Root account:|Root account seed:"
 ```
 
+Expected output resembles:
+
+```text
+Ledger: Root account: G...
+Ledger: Root account seed: S...
+```
+
+Do not use this command:
+
+```bash
+docker compose logs stellar-core |
+  grep -i -E "root|master|secret|account"
+```
+
+In this setup, it usually finds messages such as:
+
+```text
+Resolving secret from file
+```
+
+Those messages refer to the validator’s `NODE_SEED`; they do not reveal the root account.
+
+The log method is only a convenience for a newly initialized network. Logs may be rotated or deleted, so deriving the account with Stellar CLI is the reliable method.
+
 > [!CAUTION]
-> The root account secret controls the initial native supply. Do not commit it, print it in CI logs, or expose it to client applications.
+> The root account secret controls the network’s initial native-asset supply.
+>
+> * Never commit it to Git.
+> * Never place it in `.env`.
+> * Never expose it to frontend or client applications.
+> * Avoid printing it in CI logs.
+> * Store it only in a secure secret manager when it must be retained.
+>
+> Because the root account is deterministically derived from the network passphrase, anyone who knows the passphrase can derive the same root secret. For anything beyond development, move the initial funds to separately generated, securely stored accounts.
 
 ## Application configuration
 
