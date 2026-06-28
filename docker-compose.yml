@@ -1,0 +1,77 @@
+name: stellar-private
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-stellar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-horizon}
+    volumes:
+      - horizon_db:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-stellar} -d ${POSTGRES_DB:-horizon}
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  history:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - history_data:/usr/share/nginx/html:ro
+
+  stellar-core:
+    image: stellar/stellar-core:27.0.1-3368.6e768de7a.jammy
+    restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - /scripts/start-core.sh
+    volumes:
+      - ./config/stellar-core.cfg:/etc/stellar/stellar-core.cfg:ro
+      - ./scripts/start-core.sh:/scripts/start-core.sh:ro
+      - ./secrets/node_seed:/run/secrets/node_seed:ro
+      - core_data:/var/lib/stellar-core
+      - history_data:/history
+    ports:
+      # Keep the Core admin endpoint local to the Docker host.
+      - "127.0.0.1:11626:11626"
+      # Uncomment only when another machine/node must connect to this peer.
+      # - "11625:11625"
+    depends_on:
+      - history
+
+  horizon:
+    image: stellar/stellar-horizon:27.0.0
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-stellar}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-horizon}?sslmode=disable
+      NETWORK_PASSPHRASE: ${NETWORK_PASSPHRASE}
+      STELLAR_CORE_URL: http://stellar-core:11626
+      HISTORY_ARCHIVE_URLS: http://history
+      CAPTIVE_CORE_CONFIG_PATH: /etc/stellar/stellar-captive-core.cfg
+      CAPTIVE_CORE_STORAGE_PATH: /var/lib/stellar-horizon/captive-core
+      CHECKPOINT_FREQUENCY: "8"
+      PER_HOUR_RATE_LIMIT: "0"
+      APPLY_MIGRATIONS: "true"
+    volumes:
+      - ./config/stellar-captive-core.cfg:/etc/stellar/stellar-captive-core.cfg:ro
+      - horizon_captive:/var/lib/stellar-horizon/captive-core
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      stellar-core:
+        condition: service_started
+      history:
+        condition: service_started
+
+volumes:
+  core_data:
+  horizon_db:
+  horizon_captive:
+  history_data:
