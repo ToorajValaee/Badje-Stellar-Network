@@ -670,7 +670,3 @@ The supplied one-node setup deliberately prioritizes simplicity over availabilit
 - [Stellar network passphrases](https://developers.stellar.org/docs/networks)
 - [Stellar software versions](https://developers.stellar.org/docs/networks/software-versions)
 - [Stellar CLI root account commands](https://developers.stellar.org/docs/tools/cli/stellar-cli)
-
-## License
-
-Add the license appropriate for your repository before publishing it publicly.
