@@ -31,7 +31,7 @@ flowchart LR
 
 | Component | Image |
 |---|---|
-| Stellar Core | `stellar/stellar-core:27.1.0` |
+| Stellar Core | `stellar/stellar-core:27.0.1-3368.6e768de7a.jammy` |
 | Stellar Horizon | `stellar/stellar-horizon:27.0.0` |
 | PostgreSQL | `postgres:16-alpine` |
 | Nginx | `nginx:1.27-alpine` |
@@ -87,7 +87,7 @@ cd <YOUR_REPOSITORY_DIRECTORY>
 Generate a new validator seed:
 
 ```bash
-docker run --rm stellar/stellar-core:27.1.0 gen-seed
+docker run --rm stellar/stellar-core:27.0.1-3368.6e768de7a.jammy gen-seed
 ```
 
 The command prints:
